@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內分泌特工隊：荷爾蒙大作戰 - 最終版</title>
+    <style>
+        /* CSS 樣式：手機閱讀優化 (保持不變) */
+        body {
+            font-family: 'Helvetica Neue', '微軟正黑體', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background-color: #f8f8fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            font-size: 16px; 
+            line-height: 1.6; 
+        }
+        #game-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+            margin-top: 0;
+            font-size: 1.8em; 
+        }
+        h2 {
+            color: #3a75c4;
+            margin-top: 25px;
+            border-left: 5px solid #3a75c4;
+            padding-left: 12px;
+            font-size: 1.4em;
+        }
+        #monitor p {
+            font-size: 1.1em;
+            margin: 10px 0;
+            padding: 8px;
+            border-bottom: 1px dotted #ccc;
+        }
+        #monitor span {
+            font-weight: bold;
+            color: #dc3545; 
+            padding: 0 8px;
+            border-radius: 4px;
+            transition: color 0.5s; 
+        }
+        #target-standards {
+            margin-top: 20px;
+            border: 1px dashed #3a75c4;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f0f7ff;
+        }
+        #target-standards ul {
+            list-style: disc;
+            padding-left: 20px;
+            margin: 10px 0 0 0;
+            font-size: 1em;
+        }
+        #target-standards li {
+            margin-bottom: 5px;
+        }
+        #target-standards span {
+            font-weight: bold;
+            color: #28a745; 
+        }
+        #control-panel button {
+            display: block; 
+            width: 100%; 
+            padding: 15px;
+            margin: 15px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em; 
+            font-weight: bold;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #release-insulin {
+            background-color: #5cb85c; 
+            color: white;
+        }
+        #synthesize-cortisol {
+            background-color: #f0ad4e; 
+            color: #333;
+        }
+        #apply-feedback {
+            background-color: #007bff; 
+            color: white;
+        }
+        #apply-feedback:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #game-message {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e9f5ff;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #cce5ff;
+        }
+        .action-log {
+            font-size: 0.95em;
+            margin: 7px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px dotted #a0c4ff;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                font-size: 14px; 
+            }
+            #game-container {
+                padding: 20px 15px;
+                border-radius: 0; 
+                box-shadow: none;
+            }
+            #control-panel button {
+                font-size: 1.0em;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>內分泌特工隊：荷爾蒙大作戰</h1>
+    <p>**遊戲目標：** **將所有生理指標維持在下方「健康標準範圍」內 20 秒以達成勝利！**</p>
+
+    <div id="monitor">
+        <h2>📊 身體恆定狀態 (即時數據)</h2>
+        <p>血糖濃度：<span id="blood-glucose">100</span> mg/dL</p>
+        <p>壓力指數：<span id="stress-level">0</span></p>
+        <p>皮質醇 (下游荷爾蒙)：<span id="cortisol-level">10</span> μg/dL</p>
+        <p>促腎上腺皮質素 (ACTH, 上游荷爾蒙)：<span id="acth-level">15</span> pg/mL</p>
+        <p style="font-weight: bold; color: #007bff;">
+            勝利倒數：<span id="success-progress" style="color: #28a745;">0</span> / 20 秒
+        </p>
+    </div>
+
+    <div id="target-standards">
+        <h2>🎯 勝利目標：健康標準範圍</h2>
+        <ul>
+            <li>血糖濃度 (BG)：<span id="target-bg"></span> mg/dL</li>
+            <li>壓力指數 (Stress)：<span id="target-stress"></span></li>
+            <li>皮質醇 (Cortisol)：<span id="target-cortisol"></span> μg/dL</li>
+            <li>ACTH：<span id="target-acth"></span> pg/mL</li>
+        </ul>
+    </div>
+
+    <div id="control-panel">
+        <h2>🛠️ 腺體指揮中心 (玩家行動)</h2>
+        <button id="release-insulin">胰臟：釋放胰島素特工 (多肽類 - 快速作用)</button>
+        <button id="synthesize-cortisol">腎上腺：合成皮質醇特工 (類固醇 - 長效調控)</button>
+        <button id="apply-feedback" disabled>負回饋：抑制ACTH (HPA軸)</button>
+    </div>
+
+    <div id="game-message"></div>
+</div>
+
+<script>
+// ** 遊戲核心邏輯 (JavaScript) - 升糖素自動救援版 **
+
+// 1. 遊戲狀態與常量定義
+const GameState = {
+    bloodGlucose: 100, 
+    stressLevel: 0,    
+    TIME_TICK_MS: 1000, 
+    GLUCOSE_EFFECT_RATE: 30, 
+    CORTISOL_CRITICAL_LEVEL: 18, 
+    successCounter: 0, 
+    SUCCESS_TARGET: 20, 
+    
+    // 符合正常人體生理標準的勝利目標範圍
+    BG_MIN: 70, 
+    BG_MAX: 130, 
+    STRESS_MAX: 20, 
+    CORTISOL_MAX: 20, 
+    ACTH_MAX: 25, 
+};
+
+// 2. 荷爾蒙系統類別 (精確指數衰減)
+class HormoneAgent {
+    constructor(initialLevel, halfLifeInTicks) {
+        this.level = initialLevel;
+        this.halfLife = halfLifeInTicks; 
+    }
+    decay() {
+        if (this.level > 0) {
+            const decayFactor = Math.pow(0.5, 1 / this.halfLife);
+            this.level *= decayFactor;
+            this.level = Math.max(5, this.level); 
+        }
+    }
+}
+
+const ACTH_AGENT = new HormoneAgent(15, 10); 
+const CORTISOL_AGENT = new HormoneAgent(10, 60); 
+
+// 3. 函數：初始化顯示勝利標準
+function initializeTargetDisplay() {
+    document.getElementById('target-bg').innerText = `${GameState.BG_MIN} ~ ${GameState.BG_MAX}`;
+    document.getElementById('target-stress').innerText = `< ${GameState.STRESS_MAX}`;
+    document.getElementById('target-cortisol').innerText = `< ${GameState.CORTISOL_MAX}`;
+    document.getElementById('target-acth').innerText = `< ${GameState.ACTH_MAX}`;
+}
+
+// 4. 遊戲函數：界面更新與訊息顯示
+
+function updateDisplay() {
+    GameState.acthLevel = ACTH_AGENT.level;
+    GameState.cortisolLevel = CORTISOL_AGENT.level;
+    
+    document.getElementById('blood-glucose').innerText = GameState.bloodGlucose.toFixed(1);
+    document.getElementById('stress-level').innerText = GameState.stressLevel.toFixed(1);
+    document.getElementById('cortisol-level').innerText = GameState.cortisolLevel.toFixed(1);
+    document.getElementById('acth-level').innerText = GameState.acthLevel.toFixed(1);
+    document.getElementById('success-progress').innerText = GameState.successCounter;
+
+    // 根據數值改變顏色警示
+    const bgSpan = document.getElementById('blood-glucose');
+    if (GameState.bloodGlucose > 180 || GameState.bloodGlucose < 60) {
+        bgSpan.style.color = '#dc3545'; 
+    } else if (GameState.bloodGlucose > 120 || GameState.bloodGlucose < 70) {
+        bgSpan.style.color = '#ffc107'; 
+    } else {
+        bgSpan.style.color = '#28a745'; 
+    }
+
+    const feedbackButton = document.getElementById('apply-feedback');
+    if (GameState.cortisolLevel > GameState.CORTISOL_CRITICAL_LEVEL) {
+        feedbackButton.disabled = false;
+        feedbackButton.textContent = `負回饋：啟動！抑制腦垂體ACTH (皮質醇 > ${GameState.CORTISOL_CRITICAL_LEVEL.toFixed(1)} μg/dL)`;
+    } else {
+        feedbackButton.disabled = true;
+        feedbackButton.textContent = `負回饋：需皮質醇 > ${GameState.CORTISOL_CRITICAL_LEVEL.toFixed(1)} μg/dL`;
+    }
+}
+
+function displayMessage(msg) {
+    const msgElement = document.getElementById('game-message');
+    const newMsg = document.createElement('p');
+    newMsg.className = 'action-log';
+    newMsg.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    msgElement.prepend(newMsg);
+    while (msgElement.children.length > 8) {
+        msgElement.removeChild(msgElement.lastChild);
+    }
+}
+
+
+// 5. 玩家操作函數 (保持不變)
+
+document.getElementById('release-insulin').onclick = () => {
+    if (GameState.bloodGlucose < 120) {
+        displayMessage("⚠️ 血糖已正常或偏低。過度分泌胰島素將導致低血糖！");
+        GameState.bloodGlucose = Math.max(50, GameState.bloodGlucose - 5); 
+        return;
+    }
+    
+    const amount = GameState.GLUCOSE_EFFECT_RATE;
+    GameState.bloodGlucose = Math.max(50, GameState.bloodGlucose - amount);
+    displayMessage(`✅ 胰島素特工 (多肽類) 綁定細胞表面 ENZCR，血糖快速下降 ${amount} 單位。`);
+};
+
+document.getElementById('synthesize-cortisol').onclick = () => {
+    if (CORTISOL_AGENT.level > 40) {
+         displayMessage("❌ 皮質醇已達危險高值！請先啟動負回饋機制。");
+         return;
+    }
+    
+    CORTISOL_AGENT.level += 7;
+    displayMessage("✅ 腎上腺合成皮質醇 (類固醇)。這將長期調控代謝並緩解壓力，但需要時間。");
+};
+
+document.getElementById('apply-feedback').onclick = () => {
+    if (CORTISOL_AGENT.level > GameState.CORTISOL_CRITICAL_LEVEL) {
+        ACTH_AGENT.level = Math.max(5, ACTH_AGENT.level - 15); 
+        CORTISOL_AGENT.level -= 5; 
+        displayMessage(`🔥 負回饋成功！高濃度皮質醇抑制腦垂體 ACTH 分泌，壓力軸線恢復平衡。`);
+    } else {
+        displayMessage("⚠️ 皮質醇濃度不足以啟動有效的負回饋！請等待其累積。");
+    }
+};
+
+// 6. 遊戲主循環與狀態檢查
+
+function handleHormoneDecay() {
+    ACTH_AGENT.decay();
+    CORTISOL_AGENT.decay();
+}
+
+function handleInteractions() {
+    CORTISOL_AGENT.level += (ACTH_AGENT.level * 0.1);
+    
+    if (GameState.stressLevel > 10) {
+        ACTH_AGENT.level += 1.0;
+        GameState.stressLevel -= 1; 
+    }
+    
+    // ***** 基礎代謝消耗優化 *****
+    // 降低基礎消耗，減少血糖下跌壓力
+    GameState.bloodGlucose = Math.max(50, GameState.bloodGlucose - 1.0); 
+
+    // ***** 升糖素 (Glucagon) 自動救援機制 *****
+    if (GameState.bloodGlucose < 80) {
+        // 當血糖低於 80 時，自動提升血糖，模擬升糖素的緊急作用
+        GameState.bloodGlucose += 1.5; 
+        displayMessage("🔔 血糖過低！身體自動釋放升糖素 (Glucagon) 進行緊急救援。");
+    }
+    // ***************************************
+
+    if (CORTISOL_AGENT.level > 30) {
+        GameState.bloodGlucose += 1.0;
+        displayMessage("🚨 皮質醇過高，開始促進糖質新生，血糖持續上升！");
+    }
+}
+
+function checkGameStatus() {
+    const bg = GameState.bloodGlucose;
+    const stress = GameState.stressLevel;
+    const cortisol = CORTISOL_AGENT.level;
+    const acth = ACTH_AGENT.level;
+    
+    // 條件一：失敗條件 (Fail Condition)
+    if (bg > 280 || bg < 50 || stress > 90) {
+        displayMessage("☠️ **恆定崩潰！內分泌失衡導致系統停止運作。**");
+        clearInterval(gameInterval); 
+        alert("遊戲失敗！請重載頁面再試。");
+        return true;
+    }
+
+    // 條件二：勝利條件 (Success Condition) - 使用符合生理標準的範圍
+    const isStable = (
+        bg >= GameState.BG_MIN && bg <= GameState.BG_MAX && 
+        stress < GameState.STRESS_MAX && 
+        cortisol < GameState.CORTISOL_MAX && 
+        acth < GameState.ACTH_MAX
+    );
+
+    if (isStable) {
+        GameState.successCounter++;
+        displayMessage(`🎉 恆定狀態穩定！持續時間：${GameState.successCounter} / ${GameState.SUCCESS_TARGET} 秒`);
+
+        if (GameState.successCounter >= GameState.SUCCESS_TARGET) {
+            displayMessage("🏆 **任務完成！您已完美掌握荷爾蒙調控的藝術。**");
+            clearInterval(gameInterval); 
+            alert(`恭喜您！成功將所有生理指標維持在健康範圍 ${GameState.SUCCESS_TARGET} 秒。`);
+            return true;
+        }
+    } else {
+        // 如果失衡，計數器歸零
+        if (GameState.successCounter > 0) {
+            displayMessage("⚠️ 穩定狀態中斷！恆定計數器歸零。");
+        }
+        GameState.successCounter = 0;
+    }
+    
+    return false;
+}
+
+function gameLoop() {
+    handleHormoneDecay();
+    handleInteractions();
+    
+    if (checkGameStatus()) {
+        return; 
+    }
+
+    updateDisplay();
+}
+
+// 啟動遊戲
+updateDisplay();
+initializeTargetDisplay(); // 確保勝利標準在網頁載入時顯示
+const gameInterval = setInterval(gameLoop, GameState.TIME_TICK_MS);
+
+// 初始壓力事件
+setTimeout(() => {
+    GameState.stressLevel = 60;
+    GameState.bloodGlucose = 200; 
+    displayMessage("⚡ **緊急事件：連續熬夜且高糖飲食，恆定系統進入紅色警戒！** 請立即行動！");
+}, 500);
+</script>
+</body>
+</html>

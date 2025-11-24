@@ -172,7 +172,7 @@
 </div>
 
 <script>
-// ** 遊戲核心邏輯 (JavaScript) - 升糖素自動救援版 **
+// ** 遊戲核心邏輯 (JavaScript) - 修正受體名稱版 **
 
 // 1. 遊戲狀態與常量定義
 const GameState = {
@@ -262,7 +262,7 @@ function displayMessage(msg) {
 }
 
 
-// 5. 玩家操作函數 (保持不變)
+// 5. 玩家操作函數 
 
 document.getElementById('release-insulin').onclick = () => {
     if (GameState.bloodGlucose < 120) {
@@ -273,7 +273,8 @@ document.getElementById('release-insulin').onclick = () => {
     
     const amount = GameState.GLUCOSE_EFFECT_RATE;
     GameState.bloodGlucose = Math.max(50, GameState.bloodGlucose - amount);
-    displayMessage(`✅ 胰島素特工 (多肽類) 綁定細胞表面 ENZCR，血糖快速下降 ${amount} 單位。`);
+    // ***** 修正此處的受體名稱為「胰島素受體」 *****
+    displayMessage(`✅ 胰島素特工 (多肽類) 綁定細胞表面 胰島素受體，血糖快速下降 ${amount} 單位。`);
 };
 
 document.getElementById('synthesize-cortisol').onclick = () => {
@@ -311,17 +312,14 @@ function handleInteractions() {
         GameState.stressLevel -= 1; 
     }
     
-    // ***** 基礎代謝消耗優化 *****
-    // 降低基礎消耗，減少血糖下跌壓力
+    // 基礎代謝消耗
     GameState.bloodGlucose = Math.max(50, GameState.bloodGlucose - 1.0); 
 
-    // ***** 升糖素 (Glucagon) 自動救援機制 *****
+    // 升糖素 (Glucagon) 自動救援機制
     if (GameState.bloodGlucose < 80) {
-        // 當血糖低於 80 時，自動提升血糖，模擬升糖素的緊急作用
         GameState.bloodGlucose += 1.5; 
         displayMessage("🔔 血糖過低！身體自動釋放升糖素 (Glucagon) 進行緊急救援。");
     }
-    // ***************************************
 
     if (CORTISOL_AGENT.level > 30) {
         GameState.bloodGlucose += 1.0;
@@ -343,7 +341,7 @@ function checkGameStatus() {
         return true;
     }
 
-    // 條件二：勝利條件 (Success Condition) - 使用符合生理標準的範圍
+    // 條件二：勝利條件 (Success Condition) 
     const isStable = (
         bg >= GameState.BG_MIN && bg <= GameState.BG_MAX && 
         stress < GameState.STRESS_MAX && 
@@ -385,7 +383,7 @@ function gameLoop() {
 
 // 啟動遊戲
 updateDisplay();
-initializeTargetDisplay(); // 確保勝利標準在網頁載入時顯示
+initializeTargetDisplay(); 
 const gameInterval = setInterval(gameLoop, GameState.TIME_TICK_MS);
 
 // 初始壓力事件

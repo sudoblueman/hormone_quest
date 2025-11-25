@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>營養平衡大挑戰：微量元素危機 (V34.0)</title>
+    
+    <style>
+        /* ================================================= */
+        /* CSS 樣式：核心結構與佈局 (V34.0) */
+        /* ================================================= */
+        
+        :root { font-size: 16px; }
+        @media (max-width: 600px) { :root { font-size: 14px; } }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0.8rem;
+            background-color: #2c3e50; 
+            color: #ecf0f1;
+            line-height: 1.5;
+            overflow-y: auto; 
+            /* 保持底部邊距，為固定在底部的操作面板騰出空間 */
+            padding-bottom: 200px; 
+        }
+
+        /* 標題樣式不變，但內容更新 */
+        h1 { color: #f1c40f; text-align: center; font-size: 1.5rem; border-bottom: 2px solid #f1c40f; padding-bottom: 0.3rem; margin: 0 0 0.5rem 0; }
+        h3 { font-size: 1rem; color: #3498db; margin: 0.4rem 0 0.2rem 0; border-bottom: 1px solid #34495e; padding-bottom: 0.1rem; }
+
+        #game-container { display: flex; flex-direction: column; gap: 0.4rem; max-width: 900px; margin: 0 auto; }
+        .panel { background-color: #34495e; padding: 0.7rem; border-radius: 6px; box-shadow: 0 0 8px rgba(0, 0, 0, 0.4); }
+
+        /* ----------------------------------- */
+        /* 日誌區塊 - 最新訊息在 DOM 頂部 */
+        /* ----------------------------------- */
+        #game-output {
+            max-height: 300px; 
+            overflow-y: auto; 
+            background-color: #2c3e50;
+            border: 1px solid #3498db;
+            padding: 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        #game-output p { margin: 0 0 0.2rem 0; white-space: pre-wrap; }
+
+        /* ----------------------------------- */
+        /* 狀態條顏色 */
+        /* ----------------------------------- */
+        .status-bar-container { background-color: #2c3e50; border-radius: 5px; overflow: hidden; margin-top: 2px; border: 1px solid #7f8c8d; }
+        .status-bar { height: 10px; transition: width 0.5s ease-in-out, background-color 0.5s; }
+        .red-bar { background-color: #e74c3c; } .orange-bar { background-color: #f39c12; } .gold-bar { background-color: #f1c40f; } .green-bar { background-color: #2ecc71; } 
+        
+        /* ----------------------------------- */
+        /* 文字狀態顏色 */
+        /* ----------------------------------- */
+        .red-status-text { color: #ff7f7f !important; } 
+        .orange-status-text { color: #f39c12 !important; }
+        .gold-status-text { color: #f1c40f !important; }
+        .green-status-text { color: #2ecc71 !important; }
+
+        /* ----------------------------------- */
+        /* 固定底部的按鈕面板 */
+        /* ----------------------------------- */
+        #action-panel {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 900px; z-index: 1000; 
+            background-color: #34495e; border-radius: 0; padding: 0.7rem; 
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.5); 
+        }
+        
+        .action-content { max-width: none; margin: 0; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+
+        /* 基礎治療功能說明區塊 - 保持不變 */
+        #action-panel #care-instruction {
+            font-size: 0.85rem;
+            color: #f1c40f; 
+            background-color: #2c3e50; 
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0 10px 0; 
+            font-weight: bold;
+            border: 1px solid #e67e22; 
+            text-align: center;
+        }
+
+        /* --- 按鈕樣式 --- */
+        #action-panel button {
+            width: auto; padding: 0.6rem; margin-bottom: 0; font-size: 0.85rem; font-weight: bold;
+            color: #ffffff; border: none; border-radius: 5px; cursor: pointer; transition: all 0.2s ease;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3); background: linear-gradient(180deg, #3498db, #2980b9);
+            box-shadow: 0 3px 0 #216694; 
+        }
+        #action-panel button:hover { opacity: 0.9; transform: translateY(-1px); }
+        #action-panel button:active { box-shadow: 0 1px 0 #216694; transform: translateY(2px); }
+        
+        .base-care {
+            background: linear-gradient(180deg, #2ecc71, #27ae60);
+            box-shadow: 0 3px 0 #1e8449;
+            grid-column: 1 / span 2; 
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+        .base-care:active { box-shadow: 0 1px 0 #1e8449; }
+
+        /* 高濃縮丸 (陷阱) - 按鈕文字維持 V32.0 修正 */
+        .toxic-trap { 
+            background: linear-gradient(180deg, #e74c3c, #c0392b) !important; 
+            box-shadow: 0 3px 0 #962d20 !important; 
+            grid-column: 3 / span 1; 
+        }
+        .toxic-trap:active { box-shadow: 0 1px 0 #962d20 !important; }
+
+        .deterioration {
+            grid-column: 1 / span 3; 
+            font-size: 1rem; padding: 0.8rem; margin-top: 4px;
+            background: linear-gradient(180deg, #f1c40f, #e67e22) !important; color: #333 !important;
+            box-shadow: 4px 4px 0 #c26514 !important;
+        }
+        .deterioration:active { box-shadow: 0 1px 0 #c26514 !important; transform: translateY(3px) !important; }
+        
+        #action-panel button:disabled { background: #95a5a6; box-shadow: none; cursor: not-allowed; opacity: 0.6; transform: none; text-shadow: none; }
+
+        /* 其他次要樣式（狀態條） */
+        #top-status-bar { background-color: #2980b9; padding: 0.4rem; border-radius: 5px; font-size: 0.85rem; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        #status-display p { margin: 0.2rem 0 0.2rem 0; font-size: 0.9rem; }
+        #status-display h4 { margin-top: 0.5rem !important; }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1>營養平衡大挑戰：微量元素危機 (V34.0)</h1>
+
+        <div id="top-status-bar" class="panel">
+            </div>
+
+        <div id="status-display" class="panel">
+            <h3>🧬 病患組織功能狀態 (0-100)</h3>
+            <p>正在載入玩家狀態...</p>
+        </div>
+
+        <div id="log-panel" class="panel">
+            <h3>📜 臨床日誌與系統訊息 (最新訊息在**頂部**，無需捲動)</h3>
+            <div id="game-output">
+                <p class="log-info">> 系統：遊戲已啟動，請點擊按鈕開始遊戲。</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="action-panel" class="panel">
+        <div class="action-content" style="max-width: none; margin: 0">
+            <h3>💊 補充介入行動</h3>
+            
+            <p id="care-instruction">
+                **基礎治療與支持**：僅在 **A、C、B1** 三種維生素狀態**皆 ≥ 70** 時，才能安全地將總體健康 (OH) 提升 **10** 點。
+            </p>
+            
+            <div class="action-grid">
+                <button onclick="useItem('牛肝', 15)">A: 牛肝 (15 G)</button>
+                <button onclick="useItem('柑橘類水果', 10)">C: 柑橘 (10 G)</button>
+                <button onclick="useItem('糙米', 10)">B1: 糙米 (10 G)</button>
+                
+                <button onclick="baseCareAndSupport(20)" class="base-care">🏥 基礎治療與支持 (20 G)</button> 
+                
+                <button onclick="useItem('綜合維生素高劑量丸', 30)" class="toxic-trap">高濃縮丸 (A 過量風險 / 30 G)</button>
+                
+                <button onclick="nextRound()" class="deterioration">⏭️ 進入下一回合 (結算 Gold/狀態惡化/挑戰檢查)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // JavaScript 核心邏輯 (與 V33.0 相同)
+        // =================================================================
+
+        // --- 難度調整參數 (新手模式) ---
+        const EASY_MODE_GOLD_INCOME = 25;       
+        const EASY_MODE_MAX_STATUS_LOSS = 10;   
+        const EASY_MODE_CLINICAL_PENALTY = 5;   
+        const EASY_MODE_TOXICITY_PENALTY = 10;  
+        const EASY_MODE_SIRS_CHANCE = 0.15;     
+        const EASY_MODE_MALABSORPTION_CHANCE = 0.10; 
+        const EASY_MODE_WINNING_NUTRIENT_THRESHOLD = 60; 
+        const MIN_STABLE_NUTRIENT_LEVEL = 70; 
+
+        // -----------------------
+        
+        let playerStatus = {
+            vitamin_A: 80, 
+            vitamin_C: 95, 
+            vitamin_B1: 70, 
+            overall_health: 100,
+            gold: 100, 
+            round: 1, 
+            max_rounds: 20 
+        };
+
+        let gameChallenges = {
+            sir_active: false,
+            sir_duration: 0, 
+            malabsorption_active: false,
+            malabsorption_duration: 0 
+        };
+
+        const micronutrientData = {
+            vitamin_A: {
+                name: "維生素 A",
+                deficiency_name: "夜盲症",
+                function_desc: "視覺、免疫。",
+                min_safe: 70
+            },
+            vitamin_C: {
+                name: "維生素 C",
+                deficiency_name: "壞血病",
+                function_desc: "抗氧化劑。",
+                min_safe: 70
+            },
+            vitamin_B1: {
+                name: "維生素 B1",
+                deficiency_name: "腳氣病",
+                function_desc: "碳水代謝。",
+                min_safe: 70
+            }
+        };
+
+        const WINNING_HEALTH_THRESHOLD = 60;
+        const WINNING_NUTRIENT_THRESHOLD = EASY_MODE_WINNING_NUTRIENT_THRESHOLD; 
+
+        /**
+         * 輔助函數：將訊息輸出到 HTML 遊戲日誌中，最新訊息在頂部
+         */
+        function logToHTML(messages, type = 'log-info') {
+            const outputDiv = document.getElementById('game-output');
+            
+            const elementsToPrepend = [];
+            messages.forEach(msg => {
+                const p = document.createElement('p');
+                p.textContent = `> ${msg}`;
+                p.classList.add(type);
+                elementsToPrepend.push(p);
+            });
+            
+            outputDiv.prepend(...elementsToPrepend);
+        }
+
+        // 輔助函數：檢查所有按鈕是否禁用
+        function disableAllActions() {
+             document.querySelectorAll('#action-panel button').forEach(btn => btn.disabled = true);
+        }
+
+        // 輔助函數：更新所有顯示面板
+        function updateAllDisplays() {
+            updateStatusDisplay();
+            updateResourceChallengeDisplay();
+        }
+
+        // 函數：更新資源、回合、目標面板 (略)
+        function updateResourceChallengeDisplay() {
+            const rcDiv = document.getElementById('top-status-bar');
+            let html = `<div class="info-item">💰 Gold: ${playerStatus.gold}</div>`;
+            html += `<div class="objective-item">📅 回合/目標: ${playerStatus.round} / ${playerStatus.max_rounds}</div>`;
+            
+            let challengeHtml = '';
+            if (gameChallenges.sir_active) {
+                challengeHtml += `<div class="challenge-item">🔥 SIRS (${gameChallenges.sir_duration}R)</div>`;
+            }
+            if (gameChallenges.malabsorption_active) {
+                challengeHtml += `<div class="challenge-item">🦠 吸收不良 (${gameChallenges.malabsorption_duration}R)</div>`;
+            }
+            if (challengeHtml) {
+                html += challengeHtml;
+            } else {
+                 html += `<div class="info-item" style="color:#2ecc71">✅ 臨床穩定</div>`;
+            }
+            
+            rcDiv.innerHTML = html;
+        }
+
+        /**
+         * 函數：更新組織功能狀態顯示面板 
+         */
+        function updateStatusDisplay() {
+            const statusDiv = document.getElementById('status-display');
+            let html = '<h3>🧬 病患組織功能狀態 (0-100)</h3>';
+            
+            for (const nutrientKey in playerStatus) {
+                if (nutrientKey === 'overall_health' || nutrientKey === 'gold' || nutrientKey === 'round' || nutrientKey === 'max_rounds') continue;
+                
+                let level = playerStatus[nutrientKey];
+                let colorClass = 'green-bar';
+                let textColorClass = 'green-status-text'; 
+                const data = micronutrientData[nutrientKey];
+
+                if (level < 50) { colorClass = 'red-bar'; textColorClass = 'red-status-text'; } 
+                else if (level < 70) { colorClass = 'orange-bar'; textColorClass = 'orange-status-text'; } 
+                else if (level < 90) { colorClass = 'gold-bar'; textColorClass = 'gold-status-text'; } 
+
+                // 應用顏色類別到狀態文字上
+                html += `<p>
+                    <strong class="${textColorClass}">${data.name}</strong>: 
+                    <strong class="${textColorClass}">${level.toFixed(0)}/100</strong>
+                    <div class="status-bar-container">
+                        <div class="status-bar ${colorClass}" style="width: ${level}%;"></div>
+                    </div>
+                </p>`;
+            }
+
+            // 總體健康狀態條 (OH)
+            let overallColor = (playerStatus.overall_health > 50) ? 'green-bar' : 'red-bar';
+            let overallTextColorClass = (overallColor.includes('red')) ? 'red-status-text' : 'green-status-text';
+            
+            html += `<h4 class="${overallTextColorClass}" style="font-size: 1rem;">
+                總體健康 (OH): <strong>${playerStatus.overall_health.toFixed(0)}/100</strong>
+            </h4>
+            <div class="status-bar-container">
+                <div class="status-bar ${overallColor}" style="width: ${playerStatus.overall_health}%;"></div>
+            </div>
+            `;
+            
+            statusDiv.innerHTML = html;
+        }
+
+
+        /**
+         * 核心機制 1：檢查並懲罰進入臨床缺乏的狀態 (略)
+         */
+        function checkTissueFunctionalStatus() {
+            let statusUpdates = [];
+            
+            if (gameChallenges.sir_active) {
+                statusUpdates.push("【SIRS 警報】炎症反應中，維生素血清數值可能失真！");
+            }
+
+            for (const nutrientKey in playerStatus) {
+                if (nutrientKey === 'overall_health' || nutrientKey === 'gold' || nutrientKey === 'round' || nutrientKey === 'max_rounds') continue;
+                
+                const currentLevel = playerStatus[nutrientKey];
+                const data = micronutrientData[nutrientKey];
+                
+                if (currentLevel < 50) {
+                    playerStatus.overall_health -= EASY_MODE_CLINICAL_PENALTY; 
+                    statusUpdates.push(`危險！${data.name} 缺乏導致 ${data.deficiency_name}。OH -${EASY_MODE_CLINICAL_PENALTY}。`);
+                }
+            }
+            
+            if (playerStatus.overall_health <= 0) {
+                logToHTML(["【遊戲失敗】 病患組織功能徹底喪失，營養管理失敗。"], 'log-error');
+                disableAllActions();
+                playerStatus.overall_health = 0; 
+                updateAllDisplays();
+                return;
+            } else if (statusUpdates.length > 0) {
+                 logToHTML(statusUpdates);
+            }
+
+            updateAllDisplays();
+        }
+
+
+        /**
+         * 核心機制 2：食物補充與毒性陷阱 (略)
+         */
+        function useItem(item, cost) {
+            let log = [];
+            let nutrientToBoost;
+            let baseGain = 15;
+            
+            if (playerStatus.overall_health <= 0 || playerStatus.round > playerStatus.max_rounds) return;
+
+            if (playerStatus.gold < cost) {
+                logToHTML([`【資源不足】購買 ${item} 需要 ${cost} G。`], 'log-error');
+                return;
+            }
+            
+            playerStatus.gold -= cost;
+
+            switch(item) {
+                case "牛肝":
+                    nutrientToBoost = "vitamin_A";
+                    if (gameChallenges.malabsorption_active) {
+                         baseGain = Math.floor(baseGain * 0.3); 
+                         log.push("【吸收不良】維生素 A 吸收效率極低！");
+                    }
+                    break;
+                case "柑橘類水果":
+                    nutrientToBoost = "vitamin_C";
+                    break;
+                case "糙米":
+                    nutrientToBoost = "vitamin_B1";
+                    break;
+                case "綜合維生素高劑量丸":
+                    if (playerStatus.vitamin_A >= 90) {
+                        logToHTML([`【急性中毒】維生素 A 過量！OH -${EASY_MODE_TOXICITY_PENALTY}！請勿重複使用高劑量丸！`], 'log-error');
+                        playerStatus.overall_health -= EASY_MODE_TOXICITY_PENALTY;
+                        checkTissueFunctionalStatus();
+                        return; 
+                    }
+                    playerStatus.vitamin_A += baseGain / 2;
+                    playerStatus.vitamin_C += baseGain / 2;
+                    playerStatus.vitamin_B1 += baseGain / 2;
+                    log.push("使用高劑量補充品，維生素 A/C/B1 小幅提升。");
+                    break;
+            }
+
+            if (nutrientToBoost && playerStatus[nutrientToBoost] !== undefined) {
+                playerStatus[nutrientToBoost] += baseGain;
+                if (playerStatus[nutrientToBoost] > 100) {
+                    playerStatus[nutrientToBoost] = 100; 
+                    log.push(`使用【${item}】，${micronutrientData[nutrientToBoost].name} 已達最大儲備量。`);
+                } else {
+                    log.push(`使用【${item}】，成功補充 ${micronutrientData[nutrientToBoost].name}！狀態提升 ${baseGain} 點。`);
+                }
+            }
+            
+            logToHTML(log, 'log-success');
+            checkTissueFunctionalStatus();
+        }
+
+        /**
+         * 核心機制 4: 基礎治療與支持 (OH 恢復機制)
+         */
+        function baseCareAndSupport(cost = 20) {
+            if (playerStatus.overall_health <= 0 || playerStatus.round > playerStatus.max_rounds) return;
+            if (playerStatus.gold < cost) {
+                logToHTML([`【資源不足】基礎治療需要 ${cost} G。`], 'log-error');
+                return;
+            }
+            
+            playerStatus.gold -= cost;
+            
+            // 檢查病患是否穩定 (所有維生素狀態必須 >= 70)
+            const isStable = playerStatus.vitamin_A >= MIN_STABLE_NUTRIENT_LEVEL && 
+                             playerStatus.vitamin_C >= MIN_STABLE_NUTRIENT_LEVEL && 
+                             playerStatus.vitamin_B1 >= MIN_STABLE_NUTRIENT_LEVEL;
+            
+            if (isStable) {
+                const recoveryAmount = 10;
+                playerStatus.overall_health += recoveryAmount;
+                if (playerStatus.overall_health > 100) playerStatus.overall_health = 100;
+                logToHTML([`【基礎治療】 ✅ 病患營養穩定 (A/C/B1 ≥ ${MIN_STABLE_NUTRIENT_LEVEL})。總體健康恢復 ${recoveryAmount} 點。`], 'log-success');
+            } else {
+                logToHTML([`【基礎治療】⚠️ 營養素不均衡 (需 A/C/B1 皆 ≥ ${MIN_STABLE_NUTRIENT_LEVEL})。OH 無法改善，金幣已花費。`], 'log-warning');
+            }
+            
+            updateAllDisplays();
+            checkTissueFunctionalStatus(); 
+        }
+        
+        /**
+         * 遊戲目標：檢查勝利條件 (略)
+         */
+        function checkWinCondition() {
+            if (playerStatus.round <= playerStatus.max_rounds) return;
+
+            logToHTML(["\n--- 🏆 最終營養管理評估報告 ---"], 'log-round');
+            
+            const isHealthOK = playerStatus.overall_health >= WINNING_HEALTH_THRESHOLD;
+            let isNutrientOK = true;
+            let finalScore = playerStatus.overall_health;
+
+            for (const key in micronutrientData) {
+                if (playerStatus[key] < WINNING_NUTRIENT_THRESHOLD) {
+                    isNutrientOK = false;
+                    logToHTML([`[警告] ${micronutrientData[key].name} 狀態 (${playerStatus[key].toFixed(0)}) 低於最終要求 (${WINNING_NUTRIENT_THRESHOLD})！`], 'log-warning');
+                    finalScore -= 20; 
+                } else {
+                    finalScore += 5; 
+                }
+            }
+            
+            if (isHealthOK && isNutrientOK) {
+                logToHTML([
+                    "🎉🎉🎉 **恭喜！您成功完成 20 回合的管理！** 🎉🎉🎉",
+                    `最終總評分: ${finalScore + playerStatus.gold/2}。`,
+                    "病患已達到臨床穩定與最佳組織狀態！"
+                ], 'log-success');
+            } else {
+                logToHTML([
+                    "⚠️ **評估結果：管理仍有風險。**",
+                    `總體健康: ${playerStatus.overall_health.toFixed(0)}/${WINNING_HEALTH_THRESHOLD}。`,
+                    "未能達成最終目標，仍需繼續觀察與調整。"
+                ], 'log-error');
+            }
+
+            disableAllActions();
+        }
+
+        /**
+         * 核心機制 3：進入下一回合 (時間流逝) (略)
+         */
+        function nextRound() {
+            if (playerStatus.overall_health <= 0) return;
+            if (playerStatus.round > playerStatus.max_rounds) {
+                checkWinCondition();
+                return;
+            }
+
+            playerStatus.round++;
+            logToHTML([`\n--- 進入第 ${playerStatus.round} 回合/月 ---`], 'log-round');
+            
+            // 1. Gold 收入 (回合獎勵)
+            playerStatus.gold += EASY_MODE_GOLD_INCOME + Math.floor(Math.random() * 5); 
+            logToHTML([`【回合結算】獲得 ${EASY_MODE_GOLD_INCOME + Math.floor(Math.random() * 5)} G。`], 'log-info');
+
+            // 2. 營養素狀態惡化 (基礎消耗)
+            for (const key in playerStatus) {
+                if (key !== 'overall_health' && key !== 'gold' && key !== 'round' && key !== 'max_rounds') {
+                    const reduction = Math.floor(Math.random() * (EASY_MODE_MAX_STATUS_LOSS - 3 + 1)) + 3; 
+                    playerStatus[key] -= reduction;
+                    if (playerStatus[key] < 0) playerStatus[key] = 0;
+                }
+            }
+            logToHTML(["【時間流逝】病患基礎代謝與消耗，營養素狀態惡化！"], 'log-warning');
+
+            // 3. 挑戰狀態檢查與持續時間減少
+            let challengeUpdate = [];
+            if (gameChallenges.sir_duration > 0) {
+                gameChallenges.sir_duration--;
+                if (gameChallenges.sir_duration === 0) {
+                    gameChallenges.sir_active = false;
+                    challengeUpdate.push("【挑戰解除】SIRS 結束。");
+                }
+            }
+            if (gameChallenges.malabsorption_duration > 0) {
+                gameChallenges.malabsorption_duration--;
+                if (gameChallenges.malabsorption_duration === 0) {
+                    gameChallenges.malabsorption_active = false;
+                    challengeUpdate.push("【挑戰解除】吸收不良症狀結束。");
+                }
+            }
+            if (challengeUpdate.length > 0) logToHTML(challengeUpdate, 'log-success');
+
+
+            // 4. 隨機挑戰觸發 (機率降低)
+            if (Math.random() < EASY_MODE_SIRS_CHANCE && !gameChallenges.sir_active && playerStatus.round < playerStatus.max_rounds - 5) { 
+                gameChallenges.sir_active = true;
+                gameChallenges.sir_duration = 3; 
+                logToHTML(["【突發事件】病患感染！SIRS 激活！數據失真！"], 'log-error');
+            }
+            if (Math.random() < EASY_MODE_MALABSORPTION_CHANCE && !gameChallenges.malabsorption_active && playerStatus.round < playerStatus.max_rounds - 5) { 
+                gameChallenges.malabsorption_active = true;
+                gameChallenges.malabsorption_duration = 4; 
+                logToHTML(["【突發事件】腸道不適！吸收不良！補充效率降低！"], 'log-error');
+            }
+
+            // 5. 檢查狀態與勝利條件
+            checkTissueFunctionalStatus();
+            if (playerStatus.round > playerStatus.max_rounds) {
+                 checkWinCondition();
+            }
+        }
+
+        // =================================================================
+        // 遊戲初始化
+        // =================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            logToHTML(["**程式碼已成功載入！請點擊按鈕開始遊戲。**"], 'log-success'); 
+            checkTissueFunctionalStatus();
+        });
+
+    </script>
+</body>
+</html>

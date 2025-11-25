@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>營養平衡大挑戰：微量元素危機 (V37.0)</title>
+    <title>營養平衡大挑戰：微量元素危機 (V38.0)</title>
     
     <style>
         /* ================================================= */
-        /* CSS 樣式：核心結構與佈局 (V37.0 - 延續 V36.0 的手機優化) */
+        /* CSS 樣式：核心結構與佈局 (V38.0 - 延續 V36.0/V37.0 的優化) */
         /* ================================================= */
         
         :root { font-size: 16px; }
@@ -48,7 +48,7 @@
         /* 日誌區塊 */
         #game-output {
             max-height: 200px; 
-            overflow-y: auto; 
+            overflow-y: auto; /* 允許內部捲動 */
             background-color: #2c3e50;
             border: 1px solid #3498db;
             padding: 0.6rem;
@@ -149,7 +149,7 @@
 <body>
 
     <div id="game-container">
-        <h1>營養平衡大挑戰：微量元素危機 (V37.0)</h1>
+        <h1>營養平衡大挑戰：微量元素危機 (V38.0)</h1>
 
         <div id="top-status-bar" class="panel">
             </div>
@@ -160,7 +160,7 @@
         </div>
 
         <div id="log-panel" class="panel">
-            <h3>📜 臨床日誌與系統訊息 (最新訊息在**頂部**，無需捲動)</h3>
+            <h3>📜 臨床日誌與系統訊息 (最新訊息在**頂部**，可捲動查看歷史紀錄)</h3>
             <div id="game-output">
                 <p class="log-info">> 系統：遊戲已啟動，請點擊按鈕開始遊戲。</p>
             </div>
@@ -193,7 +193,7 @@
 
     <script>
         // =================================================================
-        // JavaScript 核心邏輯 (與 V35.0/V36.0 相同)
+        // JavaScript 核心邏輯 (與 V35.0/V36.0/V37.0 相同)
         // =================================================================
 
         // --- 難度調整參數 (新手模式) ---

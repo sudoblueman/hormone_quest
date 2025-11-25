@@ -3,23 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>營養平衡大挑戰：微量元素危機 (V35.0)</title>
+    <title>營養平衡大挑戰：微量元素危機 (V36.0)</title>
     
     <style>
         /* ================================================= */
-        /* CSS 樣式：核心結構與佈局 (V35.0 - 優化手機捲動) */
+        /* CSS 樣式：核心結構與佈局 (V36.0 - 手機優化與提示) */
         /* ================================================= */
         
         :root { font-size: 16px; }
+        
+        /* --- 手機/窄螢幕優化 (最大寬度 600px) --- */
         @media (max-width: 600px) { 
-            /* 窄螢幕下基礎字體縮小，讓版面更緊湊 */
             :root { font-size: 14px; } 
             
-            /* 窄螢幕下縮小日誌面板高度，減少捲動 */
-            #game-output { max-height: 150px; }
+            /* 進一步縮小日誌面板高度 */
+            #game-output { max-height: 120px; }
             
-            /* 窄螢幕下將底部的 padding 稍微縮小，對應更小的字體 */
+            /* 極致壓縮狀態顯示面板的垂直間距 */
+            #status-display h3, #status-display h4 { margin: 0.2rem 0; }
+            #status-display p { margin: 0.1rem 0 0.1rem 0; }
+            
+            /* 縮小狀態條高度 */
+            .status-bar { height: 8px; } 
+            
+            /* 窄螢幕下將底部的 padding 稍微縮小 */
             body { padding-bottom: 180px; }
+            
+            /* 顯示手機捲動提示 */
+            #mobile-scroll-tip { display: block; }
         }
 
         body {
@@ -30,8 +41,7 @@
             color: #ecf0f1;
             line-height: 1.5;
             overflow-y: auto; 
-            /* 保持底部邊距，為固定在底部的操作面板騰出空間 */
-            padding-bottom: 200px; 
+            padding-bottom: 200px; /* 寬螢幕安全間距 */
         }
 
         /* 標題與基礎面板樣式 */
@@ -45,7 +55,7 @@
         /* 日誌區塊 - 調整預設高度 */
         /* ----------------------------------- */
         #game-output {
-            max-height: 200px; /* 預設高度縮小 */
+            max-height: 200px; 
             overflow-y: auto; 
             background-color: #2c3e50;
             border: 1px solid #3498db;
@@ -57,15 +67,13 @@
         #game-output p { margin: 0 0 0.2rem 0; white-space: pre-wrap; }
 
         /* ----------------------------------- */
-        /* 狀態條顏色 */
+        /* 狀態條顏色與基礎樣式 */
         /* ----------------------------------- */
         .status-bar-container { background-color: #2c3e50; border-radius: 5px; overflow: hidden; margin-top: 2px; border: 1px solid #7f8c8d; }
-        .status-bar { height: 10px; transition: width 0.5s ease-in-out, background-color 0.5s; }
+        .status-bar { height: 10px; transition: width 0.5s ease-in-out, background-color 0.5s; } /* 寬螢幕預設高度 */
         .red-bar { background-color: #e74c3c; } .orange-bar { background-color: #f39c12; } .gold-bar { background-color: #f1c40f; } .green-bar { background-color: #2ecc71; } 
         
-        /* ----------------------------------- */
         /* 文字狀態顏色 */
-        /* ----------------------------------- */
         .red-status-text { color: #ff7f7f !important; } 
         .orange-status-text { color: #f39c12 !important; }
         .gold-status-text { color: #f1c40f !important; }
@@ -84,6 +92,16 @@
         .action-content { max-width: none; margin: 0; }
         .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
 
+        /* 行動面板頂部提示 (預設隱藏，僅在手機螢幕上顯示) */
+        #mobile-scroll-tip {
+            display: none; /* 預設在寬螢幕上隱藏 */
+            font-size: 0.75rem; 
+            color: #3498db; /* 亮藍色提示 */
+            text-align: center;
+            margin-bottom: 5px; 
+            font-weight: bold;
+        }
+
         /* 基礎治療功能說明區塊 */
         #action-panel #care-instruction {
             font-size: 0.85rem;
@@ -97,7 +115,7 @@
             text-align: center;
         }
 
-        /* --- 按鈕樣式 --- */
+        /* --- 按鈕樣式 --- (保持不變) */
         #action-panel button {
             width: auto; padding: 0.6rem; margin-bottom: 0; font-size: 0.85rem; font-weight: bold;
             color: #ffffff; border: none; border-radius: 5px; cursor: pointer; transition: all 0.2s ease;
@@ -116,7 +134,6 @@
         }
         .base-care:active { box-shadow: 0 1px 0 #1e8449; }
 
-        /* 高濃縮丸 (陷阱) */
         .toxic-trap { 
             background: linear-gradient(180deg, #e74c3c, #c0392b) !important; 
             box-shadow: 0 3px 0 #962d20 !important; 
@@ -144,7 +161,7 @@
 <body>
 
     <div id="game-container">
-        <h1>營養平衡大挑戰：微量元素危機 (V35.0)</h1>
+        <h1>營養平衡大挑戰：微量元素危機 (V36.0)</h1>
 
         <div id="top-status-bar" class="panel">
             </div>
@@ -165,6 +182,8 @@
     <div id="action-panel" class="panel">
         <div class="action-content" style="max-width: none; margin: 0">
             <h3>💊 補充介入行動</h3>
+
+            <p id="mobile-scroll-tip">👆 **提示：操作面板是固定的，請捲動上方頁面查看狀態與日誌。**</p>
             
             <p id="care-instruction">
                 **基礎治療與支持**：僅在 **A、C、B1** 三種維生素狀態**皆 ≥ 70** 時，才能安全地將總體健康 (OH) 提升 **10** 點。
@@ -186,7 +205,7 @@
 
     <script>
         // =================================================================
-        // JavaScript 核心邏輯 (與 V33.0 相同)
+        // JavaScript 核心邏輯 (與 V35.0 相同)
         // =================================================================
 
         // --- 難度調整參數 (新手模式) ---

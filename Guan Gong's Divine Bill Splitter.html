@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>關公神算：智慧分帳儀</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.firebaseInit = async () => {
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            window.app = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.app);
+            window.auth = getAuth(window.app);
+
+            // Authentication
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(window.auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(window.auth);
+                }
+                console.log("Firebase Auth successful.");
+            } catch (error) {
+                console.error("Firebase Auth failed:", error);
+            }
+
+            // After initialization and authentication, start the app logic
+            document.dispatchEvent(new Event('firebaseReady'));
+        };
+
+        // Check for required global variables and initialize
+        if (typeof __firebase_config !== 'undefined') {
+            window.firebaseInit();
+        } else {
+            console.warn("Firebase configuration not found. Running in mock mode.");
+            document.addEventListener('DOMContentLoaded', () => {
+                document.dispatchEvent(new Event('firebaseReady'));
+            });
+        }
+    </script>
+    <style>
+        /* Custom styles inspired by Guan Gong/ancient Chinese aesthetics: red, gold, green */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f0; /* Light parchment color */
+        }
+        .scroll-container {
+            /* Simulating a parchment or scroll effect */
+            background-color: #fffbef;
+            border: 1px solid #e0e0d1;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .guan-gong-header {
+            background: linear-gradient(135deg, #a30000 0%, #d42b2b 100%); /* Deep Red/Crimson */
+        }
+        .chat-bubble-ai {
+            background-color: #e0f2f1; /* Light cyan/green for divine wisdom */
+            border-radius: 1.25rem 1.25rem 1.25rem 0.5rem;
+            color: #1c504a;
+        }
+        .chat-bubble-user {
+            background-color: #3b82f6; /* Blue for the user command */
+            border-radius: 1.25rem 1.25rem 0.5rem 1.25rem;
+            color: white;
+        }
+        .bill-item:nth-child(even) {
+            background-color: #fef3c7; /* Subtle gold tint for every other row */
+        }
+        .bill-item:hover {
+            background-color: #fcd34d; /* Brighter gold on hover */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-8">
+
+    <div id="app" class="w-full max-w-6xl h-[90vh] flex flex-col md:flex-row scroll-container rounded-xl overflow-hidden">
+        <!-- Left Pane: Receipt/Item List -->
+        <div class="md:w-1/2 w-full p-6 border-r border-gray-200 overflow-y-auto">
+            <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">
+                收據明細 <span class="text-red-700">（待分派）</span>
+            </h2>
+            <div id="receipt-list" class="space-y-2">
+                <!-- Receipt Items will be populated here -->
+            </div>
+
+            <div id="receipt-summary" class="mt-6 pt-4 border-t-2 border-red-700 space-y-2 font-semibold text-lg">
+                <!-- Summary will be populated here -->
+            </div>
+            <p class="mt-4 text-sm text-gray-600">提示：點擊明細項目可直接分配給最近輸入的用戶。</p>
+        </div>
+
+        <!-- Right Pane: Chat Interface & Summary -->
+        <div class="md:w-1/2 w-full flex flex-col bg-white">
+            <!-- Header for the AI Chat -->
+            <div class="guan-gong-header p-4 flex items-center justify-center text-white shadow-lg">
+                <span class="text-2xl font-black">關公神算</span>
+                <span class="ml-3 text-sm italic">（神算會計師）</span>
+            </div>
+
+            <!-- Chat History -->
+            <div id="chat-history" class="flex-grow p-4 overflow-y-auto space-y-4">
+                <!-- Initial AI message -->
+                <div class="flex justify-start">
+                    <div class="chat-bubble-ai p-3 max-w-[80%] shadow-md">
+                        <p>「吾為你持刀算帳。欲分何物，直言便是，莫生異心。」</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Summary -->
+            <div id="summary-display" class="p-4 border-t border-gray-200 bg-gray-50">
+                <h3 class="text-xl font-bold mb-3 text-red-700">分帳結果 (實時更新)</h3>
+                <div id="assignment-summary" class="space-y-1 text-sm">
+                    <!-- Assignment summary will be populated here -->
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-4 border-t border-gray-200 flex space-x-2">
+                <input type="text" id="chat-input" placeholder="例如: Dhruv 吃了 Nachos" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500">
+                <button id="send-btn" class="bg-red-700 hover:bg-red-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 relative">
+                    <span id="send-text">分派</span>
+                    <!-- Loading Spinner (New addition) -->
+                    <div id="send-spinner" class="absolute inset-0 flex items-center justify-center bg-red-700 rounded-lg hidden">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Message Box for alerts (instead of alert()) -->
+    <div id="message-box" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-2xl w-80 text-center">
+            <h4 id="message-title" class="text-xl font-bold mb-3 text-red-700"></h4>
+            <p id="message-content" class="mb-4 text-gray-700"></p>
+            <button id="message-close-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800">確認</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Global Variables and Mock Data ---
+        // 偵測到您沒有 API 金鑰，已移除對 Gemini API 的依賴。
+        // 聊天回應功能現在使用本地端模擬的「關公語錄」。
+
+        // Mock Receipt Data (simulating AI parsing of an image)
+        const MOCK_RECEIPT = {
+            items: [
+                { id: 1, name: "Pizza", price: 22.00, assignedTo: [], quantity: 1 },
+                { id: 2, name: "Nachos", price: 15.00, assignedTo: [], quantity: 1 },
+                { id: 3, name: "Burger", price: 18.00, assignedTo: [], quantity: 1 },
+                { id: 4, name: "Soda", price: 3.00, assignedTo: [], quantity: 3 }
+            ],
+            subtotal: 64.00, // Pre-calculated: 22 + 15 + 18 + 9 = 64
+            tax_rate: 0.075, // 7.5%
+            tip_rate: 0.18,  // 18%
+            grand_total: 81.60
+        };
+
+        // Current state
+        let currentState = MOCK_RECEIPT;
+        let lastUser = null;
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a custom modal message instead of alert().
+         * @param {string} title
+         * @param {string} content
+         */
+        function showMessage(title, content) {
+            document.getElementById('message-title').textContent = title;
+            document.getElementById('message-content').textContent = content;
+            document.getElementById('message-box').classList.remove('hidden');
+            document.getElementById('message-box').classList.add('flex');
+        }
+        
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        /**
+         * Sets the loading state of the send button.
+         * @param {boolean} isLoading - True to show spinner, false to show text.
+         */
+        function setLoading(isLoading) {
+            const btn = document.getElementById('send-btn');
+            const text = document.getElementById('send-text');
+            const spinner = document.getElementById('send-spinner');
+            
+            btn.disabled = isLoading;
+            if (isLoading) {
+                text.classList.add('hidden');
+                spinner.classList.remove('hidden');
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+                btn.classList.remove('hover:bg-red-800');
+            } else {
+                text.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                btn.classList.add('hover:bg-red-800');
+            }
+        }
+
+        // --- Core Logic ---
+
+        /**
+         * Calculates the proportional share of tax and tip for a given item price.
+         * @param {number} itemPrice - The price of the item.
+         * @returns {{base: number, tax: number, tip: number, total: number}}
+         */
+        function calculateProportionalCost(itemPrice) {
+            // Re-calculate the grand total based on the rates, not the grand_total property
+            const totalTaxAmount = currentState.subtotal * currentState.tax_rate;
+            const totalTipAmount = currentState.subtotal * currentState.tip_rate;
+
+            // Calculate the total tax and total tip amount based on the item price relative to the subtotal
+            const taxShare = (itemPrice / currentState.subtotal) * totalTaxAmount;
+            const tipShare = (itemPrice / currentState.subtotal) * totalTipAmount;
+
+            return {
+                base: itemPrice,
+                tax: taxShare,
+                tip: tipShare,
+                total: itemPrice + taxShare + tipShare
+            };
+        }
+
+        /**
+         * Renders the receipt items in the left pane.
+         */
+        function renderReceipt() {
+            const listEl = document.getElementById('receipt-list');
+            const summaryEl = document.getElementById('receipt-summary');
+            listEl.innerHTML = '';
+
+            // 1. Render Items
+            currentState.items.forEach(item => {
+                const itemCost = calculateProportionalCost(item.price);
+                const assignedString = item.assignedTo.length > 0
+                    ? `<span class="text-sm font-medium text-green-700"> (${item.assignedTo.join(', ')})</span>`
+                    : '<span class="text-sm font-medium text-gray-500"> (未分派)</span>';
+
+                const itemEl = document.createElement('div');
+                itemEl.className = 'bill-item flex justify-between items-center p-3 rounded-lg cursor-pointer transition duration-150';
+                itemEl.innerHTML = `
+                    <span class="text-gray-800 font-semibold">${item.name} x ${item.quantity}</span>
+                    <div class="text-right">
+                        <span class="text-xl font-bold text-red-800">$${(item.price).toFixed(2)}</span>
+                        ${assignedString}
+                    </div>
+                `;
+
+                // Add click listener for quick assignment
+                itemEl.onclick = () => quickAssignItem(item.id);
+
+                listEl.appendChild(itemEl);
+            });
+
+            // 2. Render Numerical Summary
+            const totalTaxAmount = currentState.subtotal * currentState.tax_rate;
+            const totalTipAmount = currentState.subtotal * currentState.tip_rate;
+
+            summaryEl.innerHTML = `
+                <div class="flex justify-between"><span>小計 (Subtotal)</span><span>$${currentState.subtotal.toFixed(2)}</span></div>
+                <div class="flex justify-between text-yellow-800"><span>稅金 (${(currentState.tax_rate * 100).toFixed(1)}%)</span><span>$${totalTaxAmount.toFixed(2)}</span></div>
+                <div class="flex justify-between text-yellow-800"><span>小費 (${(currentState.tip_rate * 100).toFixed(0)}%)</span><span>$${totalTipAmount.toFixed(2)}</span></div>
+                <div class="flex justify-between mt-2 pt-2 border-t border-gray-300 text-3xl font-extrabold text-red-900">
+                    <span>總計 (Total)</span>
+                    <span>$${currentState.grand_total.toFixed(2)}</span>
+                </div>
+            `;
+
+            renderSummary();
+        }
+
+        /**
+         * Calculates and renders the assignment summary in the right pane.
+         */
+        function renderSummary() {
+            const summaryData = {}; // { person: { base: 0, tax: 0, tip: 0, total: 0 } }
+
+            currentState.items.forEach(item => {
+                const { base, tax, tip, total } = calculateProportionalCost(item.price);
+                const numPeople = item.assignedTo.length || 1; // Default to 1 if assignedTo is empty (unassigned cost)
+
+                // If assigned, split the cost; otherwise, calculate the unassigned total
+                if (item.assignedTo.length > 0) {
+                    const baseShare = base / numPeople;
+                    const taxShare = tax / numPeople;
+                    const tipShare = tip / numPeople;
+                    const totalShare = total / numPeople;
+
+                    item.assignedTo.forEach(person => {
+                        if (!summaryData[person]) {
+                            summaryData[person] = { base: 0, tax: 0, tip: 0, total: 0 };
+                        }
+                        summaryData[person].base += baseShare;
+                        summaryData[person].tax += taxShare;
+                        summaryData[person].tip += tipShare;
+                        summaryData[person].total += totalShare;
+                    });
+                }
+            });
+
+            const summaryEl = document.getElementById('assignment-summary');
+            summaryEl.innerHTML = '';
+
+            const people = Object.keys(summaryData);
+            if (people.length === 0) {
+                summaryEl.innerHTML = '<p class="text-gray-500 italic">尚未分派任何項目。</p>';
+                return;
+            }
+
+            people.sort().forEach(person => {
+                const data = summaryData[person];
+                const item = document.createElement('div');
+                item.className = 'flex justify-between p-2 rounded-md bg-white border border-red-100 shadow-sm';
+                item.innerHTML = `
+                    <span class="font-bold text-gray-800">${person}</span>
+                    <span class="text-right text-red-900 font-extrabold text-lg">
+                        $${data.total.toFixed(2)}
+                    </span>
+                    <span class="text-xs text-gray-500 hidden sm:inline">
+                        (含稅: $${data.tax.toFixed(2)}, 小費: $${data.tip.toFixed(2)})
+                    </span>
+                `;
+                summaryEl.appendChild(item);
+            });
+
+            // Check for unassigned items
+            const unassignedTotal = currentState.items
+                .filter(item => item.assignedTo.length === 0)
+                .reduce((acc, item) => acc + calculateProportionalCost(item.price).total, 0);
+
+            if (unassignedTotal > 0.01) {
+                 const unassignedEl = document.createElement('div');
+                 unassignedEl.className = 'flex justify-between p-2 mt-2 rounded-md bg-yellow-100 border border-yellow-400 font-bold';
+                 unassignedEl.innerHTML = `
+                    <span class="text-yellow-900">未分派總額</span>
+                    <span class="text-red-900">$${unassignedTotal.toFixed(2)}</span>
+                 `;
+                 summaryEl.appendChild(unassignedEl);
+            }
+        }
+
+        /**
+         * Simulates the LLM parsing a natural language command to extract assignments.
+         * In a real app, this would use the Gemini API with a structured JSON output schema.
+         * We're using simple client-side regex for demonstration.
+         * @param {string} command - The user's input command.
+         */
+        function parseAndApplyAssignment(command) {
+            command = command.trim();
+            // Regex to find patterns: [People] (had|ate|shared|took|got) [ItemName/s]
+            // Simple approach: look for known item names and then look for names before/after.
+
+            const itemNames = currentState.items.map(i => i.name.toLowerCase());
+
+            let assignmentFound = false;
+            let targetItem = null;
+            let targetPeople = [];
+
+            // 1. Find the Item
+            for (const name of itemNames) {
+                if (command.toLowerCase().includes(name.toLowerCase())) {
+                    targetItem = currentState.items.find(i => i.name.toLowerCase() === name.toLowerCase());
+                    break;
+                }
+            }
+
+            if (!targetItem) {
+                showMessage('神算警告', '吾未識別出欲分派的項目名稱。請明確指出項目（例如: Pizza, Nachos）。');
+                return false;
+            }
+
+            // 2. Find the People (Simple heuristics for demonstration)
+            const peopleRegex = /(Dhruv|Sarah|Sue|John|Jane|Alice|Bob|我|你|他|他們|我們|你們)/gi;
+            const matches = command.match(peopleRegex);
+
+            if (matches && matches.length > 0) {
+                targetPeople = [...new Set(matches)].map(s => s.trim()); // Deduplicate and trim
+                // Translate Chinese pronouns to English names for consistency in the logic
+                if (targetPeople.includes('我')) targetPeople = targetPeople.filter(p => p !== '我').concat(['You']);
+                if (targetPeople.includes('你')) targetPeople = targetPeople.filter(p => p !== '你').concat(['Me']);
+            }
+
+            if (targetPeople.length === 0) {
+                showMessage('神算警告', `吾識別出「${targetItem.name}」，但未識別出分派給何人。`);
+                return false;
+            }
+
+            // 3. Apply the Assignment
+            if (targetItem.assignedTo.length > 0) {
+                 showMessage('神算警告', `${targetItem.name} 已被分派給 ${targetItem.assignedTo.join(', ')}。若需重新分派，請先清空或使用更明確的指令。`);
+                 return false;
+            }
+
+            targetItem.assignedTo = targetPeople;
+            targetPeople.forEach(p => lastUser = p); // Update last user for quick assignment
+
+            assignmentFound = true;
+            return assignmentFound;
+        }
+
+        /**
+         * Simulates the AI response when no API key is available (replacing the Gemini API call).
+         * Generates a random, pre-written "Divine Accountant" quote.
+         * @param {string} userCommand - The user's input text (ignored for response generation).
+         * @returns {string} A simulated AI response string.
+         */
+        async function sendToDivineAccountant(userCommand) {
+            // Pre-written list of Guan Gong style quotes for offline/no-API mode.
+            const divineQuotes = [
+                "「忠義為本，分毫應當。」",
+                "「算數精準，心境方安。」",
+                "「和諧之路，始於精確算數。」",
+                "「金錢如流水，公義則長存。」",
+                "「分帳清晰，友誼不散。」",
+                "「吾心如明鏡，細節不漏。」",
+                "「財聚人散，公平均分，則人聚。」",
+                "「青龍偃月刀下，不容偏私。」",
+                "「此帳已清，萬事如意。」"
+            ];
+            
+            // Simulate network delay for better user experience
+            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500)); 
+
+            const randomIndex = Math.floor(Math.random() * divineQuotes.length);
+            return divineQuotes[randomIndex];
+        }
+
+        /**
+         * Handles the user's input, processes the command, and updates the UI.
+         */
+        async function handleSend() {
+            const inputEl = document.getElementById('chat-input');
+            const command = inputEl.value;
+            if (!command.trim()) return;
+
+            inputEl.value = '';
+            const chatHistoryEl = document.getElementById('chat-history');
+
+            // 1. Display User Command
+            chatHistoryEl.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="chat-bubble-user p-3 max-w-[80%] shadow-md">
+                        <p>${command}</p>
+                    </div>
+                </div>
+            `;
+            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+
+            // 2. Process/Simulate AI Parsing and State Update
+            const assignmentSuccess = parseAndApplyAssignment(command);
+
+            if (!assignmentSuccess) {
+                // If parsing failed, the showMessage modal already handled the warning
+                return;
+            }
+            
+            renderReceipt(); // Re-render receipt (left pane) and summary (right pane)
+
+            // 3. Start Loading State
+            setLoading(true);
+
+            // 4. Get AI Conversational Response (Now mocked/simulated)
+            const aiResponseText = await sendToDivineAccountant(command);
+
+            // 5. Stop Loading State
+            setLoading(false);
+
+            // 6. Display AI Response
+            chatHistoryEl.innerHTML += `
+                <div class="flex justify-start">
+                    <div class="chat-bubble-ai p-3 max-w-[80%] shadow-md">
+                        <p>${aiResponseText}</p>
+                    </div>
+                </div>
+            `;
+            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+        }
+
+        /**
+         * Quick assigns an item to the last used user.
+         * @param {number} itemId - The ID of the item to assign.
+         */
+        function quickAssignItem(itemId) {
+            if (!lastUser) {
+                showMessage('分派失敗', '請先在聊天中指定一位用戶（例如：Dhruv 吃漢堡），才能使用快速分派功能。');
+                return;
+            }
+
+            const item = currentState.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (item.assignedTo.length > 0) {
+                // Remove existing assignment
+                item.assignedTo = [];
+                showMessage('分派重置', `${item.name} 已被清空分派。`);
+            } else {
+                // Assign to last user
+                item.assignedTo = [lastUser];
+                showMessage('快速分派', `${item.name} 成功分派給 ${lastUser}。`);
+            }
+            renderReceipt();
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        document.addEventListener('firebaseReady', () => {
+            // Setup Event Listeners
+            document.getElementById('send-btn').addEventListener('click', handleSend);
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSend();
+                }
+            });
+            document.getElementById('message-close-btn').addEventListener('click', () => {
+                document.getElementById('message-box').classList.remove('flex');
+                document.getElementById('message-box').classList.add('hidden');
+            });
+
+            // Initial Render
+            renderReceipt();
+            setLoading(false); // Ensure button is clickable on load
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+             setLoading(false);
+        });
+
+
+    </script>
+</body>
+</html>

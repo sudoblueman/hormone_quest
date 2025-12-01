@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手術室火災大挑戰 V19.0 (通風增強版)</title>
+    
+    <style>
+        /* CSS 樣式與 V18.0 相同，保持穩定 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            background-color: #00796b;
+            color: white;
+            width: 100%;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+        
+        /* 隱藏標語 */
+        header p {
+            display: none; 
+        }
+
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            padding: 30px;
+            max-width: 1300px;
+            width: 100%;
+        }
+
+        .info-panel, .controls-panel, .simulation-panel, #results-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .info-panel {
+            flex: 1 1 100%;
+            border-left: 5px solid #ff9800;
+            line-height: 1.6;
+        }
+
+        .controls-panel {
+            flex: 1 1 45%;
+            display: flex;
+            flex-direction: column;
+        }
+        #initial-setup {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .simulation-panel {
+            flex: 1 1 50%;
+            min-height: 550px;
+            position: relative;
+            border: 3px solid #66bb6a;
+            transition: border-color 0.3s, box-shadow 0.3s; 
+        }
+
+        /* 警告視覺效果 */
+        .simulation-panel.alert-yellow {
+            border-color: #ffc107;
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+        .simulation-panel.alert-red {
+            border-color: #d32f2f;
+            box-shadow: 0 0 20px rgba(211, 47, 47, 0.8), 0 0 40px rgba(211, 47, 47, 0.3);
+            animation: pulse-border 0.5s infinite alternate;
+        }
+        @keyframes pulse-border {
+            from { border-width: 3px; }
+            to { border-width: 5px; }
+        }
+
+        /* 列表樣式 */
+        .goals-list {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 1.1em;
+        }
+        
+        /* 滑桿與控制區 */
+        .slider-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .live-control-slider {
+            background-color: #fffde7;
+            border-color: #ffeb3b;
+        }
+
+        #start-simulation {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        #start-simulation:hover {
+            background-color: #fb8c00;
+        }
+        
+        /* 儀表板樣式 */
+        #score-display { 
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #004d40;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 應變指示文字 */
+        .action-needed {
+            color: #d32f2f;
+            font-weight: bold;
+            animation: blink 0.5s infinite alternate;
+        }
+        @keyframes blink {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+        /* 火花效果加強 */
+        #gas-cloud.flame {
+            box-shadow: 0 0 20px 10px rgba(255, 165, 0, 0.7);
+            border: 2px solid orange;
+            transition: box-shadow 0.1s, border 0.1s;
+        }
+        #gas-cloud.explosion {
+            box-shadow: 0 0 50px 20px red;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>手術室火災大挑戰 V19.0 💪 (通風增強版)</h1>
+        <p>已確保所有符號和代碼名稱正確顯示，無亂碼問題。</p> 
+    </header>
+
+    <main>
+        <section class="info-panel">
+            <h2>📖 遊戲目標與應變提示</h2>
+            <ul class="goals-list">
+                <li>**遊戲時長：** 挑戰時間延長至 **45.0 秒** (慢動作模式)。</li>
+                <li>**核心挑戰：** **電燒刀 (P_Heat)** 會每 7 秒**間歇性地開啟/關閉** (操作間隔已延長)。</li>
+                <li>**應對增強：** 通風系統 (S\_Vent) 最大值已提升至 **15 級**，具備更強的風險控制能力。</li>
+                <li>**目標一：** **安全通過** - 成功完成 **45.0 秒** 模擬，避免爆炸 (R_risk > 95)。</li>
+                <li>**目標二：** **極限安全獎勵** - 將風險 (R_risk) 保持在 **30 以下**，可獲得額外積分獎勵。</li>
+                <li>**應變獎勵：** 在動態環境下將風險從中/高風險降回安全區，會獲得 **150 點** 獎勵積分！</li>
+            </ul>
+        </section>
+
+        <section class="controls-panel">
+            <h2>🧪 階段一：手術環境參數設置</h2>
+            
+            <div id="initial-setup">
+                <h3>**設置參數與即時控制**</h3>
+                <div id="setup-sliders-container">
+                    </div>
+            </div>
+            
+            <button id="start-simulation">🚀 開始應變！(共 45.0 秒)</button>
+        </section>
+
+        <section class="simulation-panel" id="simulation-panel">
+            <h2>🚨 階段二：實時風險監測與應變</h2>
+            
+            <div class="simulation-area">
+                <div id="gas-cloud"></div> 
+                <div id="surgical-site">電燒刀使用區域</div>
+            </div>
+            
+            <div class="dashboard">
+                <div class="meter">
+                    <p>燃料強度 (CH₄): <span id="ch4-display">0%</span></p>
+                    <div class="risk-bar ch4-bar"></div>
+                </div>
+                <div class="meter">
+                    <p>助燃劑強度 (O₂): <span id="o2-display">0X</span></p>
+                    <div class="risk-bar o2-bar"></div>
+                </div>
+                <div class="meter">
+                    <p>火源強度 (Heat): <span id="heat-display">0</span></p>
+                    <div class="risk-bar heat-bar"></div>
+                </div>
+                <div class="meter">
+                    <p>即時風險等級 (R_risk): <span id="risk-display">0</span></p>
+                    <div class="risk-bar risk-level-bar"></div>
+                </div>
+                <div class="timer">
+                    ⏳ 剩餘時間: <span id="timer-display">45.0</span> 秒<br>
+                    💯 安全積分: <span id="score-display">0</span><br>
+                    🔥 火花次數: <span id="burn-count-display">0</span> 次
+                </div>
+            </div>
+            
+            <div class="event-log">
+                模擬日誌：<span id="event-message">設置完畢，點擊開始，挑戰應變！</span>
+            </div>
+        </section>
+        
+        <section id="results-panel" class="hidden">
+            <h2>📋 模擬結果報告</h2>
+            <p id="final-result-text"></p>
+            <h3>科學觀察與結論</h3>
+            <p id="learning-point"></p>
+            <p>🏆 **最終安全積分：** <span class="achievement-text" id="final-score">0</span> 分</p>
+            <p>🔥 **總火花次數：** <span class="failure-text" id="final-burn-count">0</span> 次</p>
+            <button onclick="window.location.reload()">重新實驗</button>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>設計靈感來自：搞笑諾貝爾獎 (Ig Nobel Prize) 醫學研究</p>
+    </footer>
+
+    <script>
+        // --- 遊戲參數與常數 (V19.0: 通風增強) ---
+        const GAME_DURATION_SECONDS = 45.0; 
+        const FART_CHANGE_TIME = 3000;      
+        const HEAT_CYCLE_TIME = 7000;       
+        const RANDOM_EVENT_CHECK_TIME = 7000;
+        const UPDATE_INTERVAL = 50; 
+        
+        const BURN_THRESHOLD = 70; 
+        const HIGH_RISK_THRESHOLD = 80; 
+        const MODERATE_RISK_THRESHOLD = 60; 
+        const LOW_RISK_THRESHOLD = 30;
+        const EXPLOSION_THRESHOLD = 95; 
+        const RESPONSE_BONUS = 150; 
+        const LOW_RISK_BONUS = 50;
+        
+        // V19.0 關鍵改動：降低 Oxy 權重，增強 Vent 效果
+        const WEIGHTS = { Fuel: 0.5, Oxy: 1.0, Heat: 4, Vent: 3 }; // Oxy 從 1.5 降為 1.0
+
+        const allSliders = [
+            { id: 'fart-intensity', label: '病患腸氣產量 (I_Fart):', max: 10, unit: '級', initial: 5, controlled: 'dynamic' }, 
+            { id: 'ch4-percent', label: '燃料：甲烷比例 (C_CH₄):', max: 10, unit: '%', initial: 5, controlled: 'static' }, 
+            { id: 'o2-percent', label: '助燃劑：氧氣濃度 (C_O₂):', max: 10, unit: 'X', initial: 4, controlled: 'static' }, 
+            { id: 'heat-power', label: '火源：電燒刀強度 (P_Heat):', max: 5, unit: '級', initial: 3, controlled: 'static' }, 
+            // V19.0 關鍵改動：S_Vent 最大值從 10 增至 15
+            { id: 'vent-system', label: '控制：通風系統強度 (S_Vent):', max: 15, unit: '級', initial: 5, controlled: 'player' }, 
+        ];
+
+        // 狀態變數 (全局)
+        let simulationActive = false;
+        let animationFrameId = null; 
+        let startTime = 0; 
+        let lastUpdate = 0; 
+        let lastFartChange = 0; 
+        let lastHeatCycle = 0;
+        let lastRandomEvent = 0;
+        let isHeatActive = false;
+        let baseHeatValue = 0;
+        
+        let burnCount = 0; 
+        let currentScore = 0; 
+        let previousRiskLevel = 'safe'; 
+        let fartIntensityInput = null; 
+        let heatPowerInput = null;
+
+        const elements = {}; // DOM 元素參考
+
+        // --- 函數 1: DOM 元素獲取與檢查 ---
+        function getDOMElements() {
+            const ids = [
+                'setup-sliders-container', 'start-simulation', 'risk-display', 
+                'burn-count-display', 'score-display', 'event-message', 
+                'ch4-display', 'o2-display', 'heat-display', 'timer-display', 
+                'gas-cloud', 'simulation-panel', 'results-panel', 
+                'final-result-text', 'learning-point', 'final-burn-count', 'final-score'
+            ];
+            
+            let foundAll = true;
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    elements[id.replace(/-/g, '')] = el;
+                } else {
+                    console.error(`[V19.0 ERROR] Missing DOM Element: #${id}.`);
+                    foundAll = false;
+                }
+            });
+
+            elements.riskBar = document.querySelector('.risk-level-bar');
+            elements.ch4Bar = document.querySelector('.ch4-bar');
+            elements.o2Bar = document.querySelector('.o2-bar');
+            elements.heatBar = document.querySelector('.heat-bar');
+
+            if (!foundAll) {
+                console.error('遊戲初始化失敗：部分關鍵元件遺失，請檢查程式碼是否完整複製。');
+                return false;
+            }
+            return true;
+        }
+
+        // --- 函數 2: 初始化滑桿 ---
+        function initializeSliders() {
+            if (!elements.setupsliderscontainer) return;
+            
+            allSliders.forEach(slider => {
+                const group = document.createElement('div');
+                group.id = `${slider.id}-group`;
+                group.className = `slider-group ${slider.controlled === 'player' ? 'live-control-slider' : ''}`;
+                
+                group.innerHTML = `
+                    <label for="${slider.id}">${slider.label} <span id="${slider.id}-val">${slider.initial} ${slider.unit}</span></label>
+                    <input type="range" id="${slider.id}" min="1" max="${slider.max}" value="${slider.initial}">
+                `;
+                elements.setupsliderscontainer.appendChild(group);
+
+                const rangeInput = document.getElementById(slider.id);
+                const valueSpan = document.getElementById(`${slider.id}-val`);
+
+                if (!rangeInput || !valueSpan) {
+                     console.error(`[V19.0 ERROR] 滑桿 ${slider.id} 創建失敗。`);
+                     return;
+                }
+
+                rangeInput.addEventListener('input', () => {
+                    valueSpan.textContent = `${rangeInput.value} ${slider.unit}`;
+                    // 注意：通風系統的最大值已變為 15，但其在 dashboard 的顯示仍基於 10 級來顯示百分比 (因視覺上 max=10 的長度較合理)。
+                    // 為了簡化，儀表板的視覺條只基於 100% 寬度計算。
+                    updateDashboardDisplays(rangeInput.id, rangeInput.value); 
+                    
+                    if (slider.id === 'heat-power') {
+                        baseHeatValue = parseInt(rangeInput.value);
+                    }
+                });
+
+                if (slider.id === 'fart-intensity') {
+                    fartIntensityInput = rangeInput;
+                } else if (slider.id === 'heat-power') {
+                    heatPowerInput = rangeInput;
+                    baseHeatValue = parseInt(rangeInput.value);
+                }
+                
+                updateDashboardDisplays(slider.id, slider.initial);
+            });
+        }
+        
+        // --- 函數 3: 動態變數調整 (腸氣) ---
+        function dynamicallyChangeFart() {
+            if (!fartIntensityInput) return;
+
+            const currentValue = parseInt(fartIntensityInput.value);
+            const max = parseInt(fartIntensityInput.max);
+            const min = parseInt(fartIntensityInput.min);
+
+            let change = Math.floor(Math.random() * 3) - 1; 
+            let newValue = currentValue + change;
+            newValue = Math.max(min, Math.min(max, newValue));
+
+            fartIntensityInput.value = newValue;
+            document.getElementById('fart-intensity-val').textContent = `${newValue} 級`;
+            
+            if (newValue !== currentValue) {
+                 elements.eventmessage.textContent = `💨 環境變化：病患腸氣 ${newValue > currentValue ? '升高' : '降低'} 到 ${newValue} 級。`;
+            }
+        }
+
+        // --- 函數 4: 電燒刀間歇性循環 ---
+        function runHeatCycle(timestamp) {
+            if (!heatPowerInput) return;
+            
+            if (!isHeatActive) {
+                // 模擬電燒刀開啟
+                isHeatActive = true;
+                heatPowerInput.value = baseHeatValue;
+                document.getElementById('heat-power-val').textContent = `${baseHeatValue} 級`;
+                elements.eventmessage.textContent = '⚡️ 火源警報：電燒刀 **開啟**！請注意風險。';
+            } else {
+                // 模擬電燒刀關閉
+                isHeatActive = false;
+                heatPowerInput.value = 1; // 保持最小值，模擬關閉/待機狀態
+                document.getElementById('heat-power-val').textContent = `1 級 (待機)`;
+                elements.eventmessage.textContent = '🔋 電燒刀 **關閉/待機**。風險降低。';
+            }
+            // 強制更新儀表板顯示
+            updateDashboardDisplays('heat-power', heatPowerInput.value);
+            lastHeatCycle = timestamp;
+        }
+
+        // --- 函數 5: 隨機事件觸發器 ---
+        function triggerRandomEvent(timestamp) {
+            const roll = Math.random();
+            let eventText = '';
+            
+            // 20% 機會觸發隨機事件
+            if (roll < 0.20) {
+                const eventType = Math.random();
+                
+                if (eventType < 0.5) {
+                    // 1. 通風故障 (Vent 臨時減弱 4 級)
+                    const ventInput = document.getElementById('vent-system');
+                    if (!ventInput) return;
+
+                    const originalVent = parseInt(ventInput.value);
+                    const newVent = Math.max(1, originalVent - 4);
+
+                    ventInput.dataset.originalValue = originalVent;
+                    ventInput.value = newVent;
+                    document.getElementById('vent-system-val').textContent = `${newVent} 級 (故障!)`;
+                    eventText = '🚨 **設備故障！** 通風系統暫時減弱！請手動調整。';
+                    
+                    setTimeout(() => {
+                        if (simulationActive && ventInput.dataset.originalValue) {
+                            ventInput.value = ventInput.dataset.originalValue;
+                            document.getElementById('vent-system-val').textContent = `${ventInput.value} 級`;
+                            elements.eventmessage.textContent = '✅ 通風系統恢復正常。';
+                            delete ventInput.dataset.originalValue; 
+                        }
+                    }, 3000);
+
+                } else {
+                    // 2. 腸氣激增 (Fart 臨時增加 3 級)
+                    if (!fartIntensityInput) return;
+                    
+                    const originalFart = parseInt(fartIntensityInput.value);
+                    const newFart = Math.min(10, originalFart + 3);
+
+                    fartIntensityInput.dataset.originalValue = originalFart;
+                    fartIntensityInput.value = newFart;
+                    document.getElementById('fart-intensity-val').textContent = `${newFart} 級 (激增!)`;
+                    eventText = '💨 **緊急狀況！** 病患腸氣突然激增！';
+
+                    setTimeout(() => {
+                         if (simulationActive && fartIntensityInput.dataset.originalValue) {
+                            fartIntensityInput.value = fartIntensityInput.dataset.originalValue;
+                            document.getElementById('fart-intensity-val').textContent = `${fartIntensityInput.value} 級`;
+                            elements.eventmessage.textContent = '✅ 病患腸氣恢復正常波動。';
+                            delete fartIntensityInput.dataset.originalValue;
+                        }
+                    }, 3000);
+                }
+                
+                elements.eventmessage.innerHTML = `<span style="color: purple; font-weight: bold;">${eventText}</span>`;
+            }
+            lastRandomEvent = timestamp;
+        }
+        
+        // --- 函數 6: 更新儀表板顯示 ---
+        function updateDashboardDisplays(id, value) {
+            const maxSetup = 10;
+            const maxHeat = 5;
+            const floatValue = parseFloat(value);
+
+            if (id === 'ch4-percent' && elements.ch4display) {
+                elements.ch4display.textContent = `${floatValue}%`;
+                elements.ch4Bar.style.width = `${(floatValue / maxSetup) * 100}%`;
+            } else if (id === 'o2-percent' && elements.o2display) {
+                elements.o2display.textContent = `${floatValue}X`;
+                elements.o2Bar.style.width = `${(floatValue / maxSetup) * 100}%`;
+            } else if (id === 'heat-power' && elements.heatdisplay) {
+                elements.heatdisplay.textContent = `${floatValue}級`;
+                elements.heatBar.style.width = `${(floatValue / maxHeat) * 100}%`;
+            }
+            // 對通風系統的特殊處理：顯示實際數值，但 bar 的長度仍基於 10 級
+            else if (id === 'vent-system') {
+                 // 不更新 bar，只更新 label
+            }
+        }
+
+        // --- 函數 7: 核心風險計算 --- 
+        function calculateRisk(inputs) {
+            const { fartIntensity, ch4Percent, heatPower, ventSystem, o2Percent } = inputs;
+            
+            // 基礎風險 (乘數)
+            let baseRisk = (ch4Percent * fartIntensity * WEIGHTS.Fuel);
+            let amplifiedRisk = baseRisk * (o2Percent * WEIGHTS.Oxy);
+            
+            // 最終風險 (加減數)
+            let finalRisk = amplifiedRisk + (heatPower * WEIGHTS.Heat) - (ventSystem * WEIGHTS.Vent);
+            finalRisk = Math.max(0, Math.min(100, finalRisk));
+            return finalRisk;
+        }
+
+        // --- 函數 8: 觸發點火事件 ---
+        function triggerFireEvent(risk) {
+            if (!simulationActive || !elements.gascloud) return;
+            
+            if (risk >= BURN_THRESHOLD && !elements.gascloud.classList.contains('flame')) { 
+                elements.gascloud.classList.add('flame');
+                burnCount++;
+                elements.burncountdisplay.textContent = burnCount;
+                
+                let msg = (risk >= 85) 
+                     ? `🚨 **緊急火花！** (風險過高) **請立刻應變**！`
+                     : `🔥 小火花發生！(${Math.round(risk)}點風險) 這是第 ${burnCount} 次。`;
+                
+                elements.eventmessage.innerHTML = `<span class="failure-text">${msg}</span>`;
+                
+                currentScore = Math.max(0, currentScore - 20); 
+
+                setTimeout(() => {
+                    elements.gascloud.classList.remove('flame');
+                }, 100); 
+            }
+        }
+
+        // --- 函數 9: 遊戲主循環 (rAF 驅動) ---
+        function gameLoop(timestamp) {
+            
+            // 遊戲時間倒數與視覺更新（始終運行）
+            if (startTime === 0 && elements.timerdisplay) {
+                elements.timerdisplay.textContent = GAME_DURATION_SECONDS.toFixed(1);
+            } else if (elements.timerdisplay) {
+                const elapsedTime = timestamp - startTime;
+                const remainingSeconds = Math.max(0, GAME_DURATION_SECONDS - (elapsedTime / 1000));
+                elements.timerdisplay.textContent = remainingSeconds.toFixed(1);
+
+                if (elapsedTime >= GAME_DURATION_SECONDS * 1000) {
+                    endSimulation('safe');
+                    return; 
+                }
+            }
+
+            // --- 核心模擬邏輯 (只在 simulationActive 為 true 時執行) ---
+            if (simulationActive) {
+                
+                if (Math.floor(timestamp / 1000) !== Math.floor(lastUpdate / 1000)) {
+                    console.log(`%c[V19.0: 循環啟動] Time: ${(timestamp / 1000).toFixed(1)}s`, 'color: green;');
+                }
+
+                if (timestamp - lastFartChange >= FART_CHANGE_TIME) {
+                    dynamicallyChangeFart();
+                    lastFartChange = timestamp; 
+                }
+                if (timestamp - lastHeatCycle >= HEAT_CYCLE_TIME) {
+                    runHeatCycle(timestamp);
+                }
+                if (timestamp - lastRandomEvent >= RANDOM_EVENT_CHECK_TIME) {
+                    triggerRandomEvent(timestamp);
+                }
+
+                if (timestamp - lastUpdate >= UPDATE_INTERVAL) {
+                    
+                    const inputs = {
+                        fartIntensity: parseInt(fartIntensityInput?.value || 5),
+                        ch4Percent: parseInt(document.getElementById('ch4-percent')?.value || 5),
+                        o2Percent: parseInt(document.getElementById('o2-percent')?.value || 4),
+                        heatPower: parseInt(heatPowerInput?.value || 1),
+                        ventSystem: parseInt(document.getElementById('vent-system')?.value || 5),
+                    };
+
+                    // A. 風險計算與更新
+                    const currentRisk = calculateRisk(inputs);
+                    
+                    elements.riskdisplay.textContent = Math.round(currentRisk);
+                    elements.riskBar.style.width = `${currentRisk}%`;
+                    
+                    // B. 視覺化
+                    const cloudSize = 50 + currentRisk; 
+                    elements.gascloud.style.width = `${cloudSize}px`;
+                    elements.gascloud.style.height = `${cloudSize}px`;
+                    const red = Math.min(255, Math.floor(currentRisk * 2.5));
+                    const green = Math.max(0, 255 - Math.floor(currentRisk * 2.5));
+                    elements.gascloud.style.backgroundColor = `rgba(${red}, ${green}, 100, ${currentRisk / 150})`; 
+
+                    // C. 積分計算與獎懲
+                    let currentRiskLevel = 'safe';
+                    if (currentRisk >= HIGH_RISK_THRESHOLD) {
+                        currentRiskLevel = 'high';
+                    } else if (currentRisk >= MODERATE_RISK_THRESHOLD) {
+                        currentRiskLevel = 'moderate';
+                    } else if (currentRisk <= LOW_RISK_THRESHOLD) {
+                        currentScore += LOW_RISK_BONUS * (UPDATE_INTERVAL / 1000);
+                    }
+                    
+                    currentScore += 1 * (UPDATE_INTERVAL / 1000); 
+                    
+                    // 應變獎勵
+                    if ((previousRiskLevel === 'moderate' || previousRiskLevel === 'high') && currentRiskLevel === 'safe') {
+                        currentScore += RESPONSE_BONUS;
+                        elements.eventmessage.innerHTML = `<span style="color: green; font-weight: bold;">👍 應變成功！獲得 ${RESPONSE_BONUS} 獎勵積分！</span>`;
+                    }
+                    previousRiskLevel = currentRiskLevel; 
+                    elements.scoredisplay.textContent = Math.round(currentScore);
+                    
+                    // D. 警告與事件
+                    elements.simulationpanel.classList.remove('alert-yellow', 'alert-red');
+                    if (currentRisk >= EXPLOSION_THRESHOLD) {
+                        endSimulation('fail'); 
+                        elements.gascloud.classList.add('explosion');
+                        return; 
+                    } else if (currentRisk >= HIGH_RISK_THRESHOLD) {
+                        elements.simulationpanel.classList.add('alert-red');
+                        elements.eventmessage.innerHTML = `<span class="action-needed">🔴 風險極高！請立刻 **提高通風**！</span>`;
+                    } else if (currentRisk >= MODERATE_RISK_THRESHOLD) {
+                        elements.simulationpanel.classList.add('alert-yellow');
+                        elements.eventmessage.innerHTML = `<span class="action-needed">🟡 風險中等！請準備 **調整通風**！</span>`;
+                    }
+                    
+                    triggerFireEvent(currentRisk);
+                    
+                    lastUpdate = timestamp;
+                }
+            }
+
+            // 5. 繼續下一幀
+            animationFrameId = window.requestAnimationFrame(gameLoop);
+        }
+
+        // --- 函數 10: 啟動模擬 (綁定到按鈕) ---
+        function startSimulation() {
+            if (simulationActive) return;
+
+            console.log('%c[V19.0: 開始模擬] 遊戲啟動中...', 'color: blue; font-weight: bold;');
+            
+            simulationActive = true;
+            elements.startsimulation.disabled = true;
+            elements.resultspanel.classList.add('hidden');
+            
+            // 禁用設置參數，啟用玩家可控參數
+            allSliders.forEach(slider => {
+                const input = document.getElementById(slider.id);
+                if (slider.id === 'vent-system') {
+                    input.disabled = false; 
+                } else {
+                    input.disabled = true; 
+                }
+            });
+            
+            // 重置所有狀態
+            burnCount = 0; 
+            currentScore = 0;
+            previousRiskLevel = 'safe'; 
+            isHeatActive = false;
+
+            elements.burncountdisplay.textContent = '0';
+            elements.scoredisplay.textContent = '0';
+            elements.timerdisplay.textContent = GAME_DURATION_SECONDS.toFixed(1);
+            elements.eventmessage.textContent = '動態應變開始！';
+            elements.gascloud.classList.remove('explosion', 'flame');
+            elements.simulationpanel.classList.remove('alert-yellow', 'alert-red');
+            
+            // 初始 Heat 設置為待機 (1 級)
+            heatPowerInput.value = 1;
+            document.getElementById('heat-power-val').textContent = `1 級 (待機)`;
+            updateDashboardDisplays('heat-power', 1);
+
+            // 設置啟動時間
+            startTime = performance.now();
+            lastUpdate = startTime;
+            lastFartChange = startTime; 
+            lastHeatCycle = startTime; 
+            lastRandomEvent = startTime; 
+        }
+
+        // --- 函數 11: 結束模擬與報告 ---
+        function endSimulation(result) {
+            simulationActive = false;
+            elements.startsimulation.disabled = false;
+            
+            // 清理 rAF 循環
+            if (animationFrameId) {
+                window.cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            // 重新啟用所有滑桿以便重新開始
+            allSliders.forEach(s => {
+                document.getElementById(s.id).disabled = false;
+            });
+            
+            setTimeout(() => {
+                elements.resultspanel.classList.remove('hidden');
+            }, 100); 
+
+            let resultText = '';
+            let learningText = '';
+            
+            if (result === 'fail') {
+                resultText = '💥 **模擬失敗 (發生爆炸)**！手術室環境超載。';
+                learningText = `**失敗總結：** 您未能將風險 R_risk > 95 前控制住。電燒刀間歇性發熱，您應在發熱時集中精力調高通風。`;
+                currentScore = 0; 
+            } else {
+                resultText = '✅ **安全通過**！成功完成 45.0 秒應變挑戰。';
+                
+                if (burnCount === 0) {
+                    learningText = `**總結：** 您表現出色，完美應對了動態環境和間歇性火源，沒有發生任何火花！`;
+                } else if (burnCount > 0) {
+                     learningText = `**總結：** 模擬中發生了 ${burnCount} 次小火花。您成功將風險控制在爆炸閾值以下，獲得了 ${Math.round(currentScore)} 點安全積分。`;
+                }
+            }
+            
+            elements.finalresulttext.innerHTML = `<span class="${result === 'safe' ? 'success-text' : 'failure-text'}">${resultText}</span>`;
+            elements.learningpoint.textContent = learningText;
+            elements.finalburncount.textContent = burnCount;
+            elements.finalscore.textContent = Math.round(currentScore);
+            
+            elements.simulationpanel.classList.remove('alert-yellow', 'alert-red');
+        }
+
+
+        // --- 初始化入口 ---
+        window.onload = () => {
+            if (getDOMElements()) {
+                initializeSliders();
+                
+                if (elements.startsimulation) {
+                    elements.startsimulation.addEventListener('click', startSimulation);
+                }
+                
+                animationFrameId = window.requestAnimationFrame(gameLoop);
+                console.log(`[V19.0: 初始化完成] 遊戲循環已啟動 (計時器應當靜止在 ${GAME_DURATION_SECONDS.toFixed(1)} 秒)。請點擊 "開始應變" 按鈕。`);
+            }
+        };
+
+    </script>
+</body>
+</html>
